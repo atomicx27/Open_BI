@@ -206,6 +206,9 @@ function applyVisualFormatting(visualObj, formatArgs) {
     if (formatArgs.dataLabels.color !== undefined) {
       labelProps.color = { "solid": { "color": { "expr": { "Literal": { "Value": `'${formatArgs.dataLabels.color}'` } } } } };
     }
+    if (formatArgs.dataLabels.labelStyle !== undefined) {
+      labelProps.labelStyle = { "expr": { "Literal": { "Value": `'${formatArgs.dataLabels.labelStyle}'` } } };
+    }
     objects.labels = [{ "properties": labelProps }];
   }
 
@@ -952,7 +955,8 @@ rl.on('line', (line) => {
                     properties: {
                       show: { type: "boolean" },
                       fontSize: { type: "integer" },
-                      color: { type: "string", description: "Hex color code" }
+                      color: { type: "string", description: "Hex color code" },
+                      labelStyle: { type: "string", description: "Label content style (e.g. 'Category, percent of total', 'Percent of total', 'Category, data value')" }
                     }
                   },
                   axisOverrides: {

@@ -240,7 +240,8 @@ function runMcpSession() {
           dataLabels: {
             show: true,
             fontSize: 10,
-            color: "#333333"
+            color: "#333333",
+            labelStyle: "Category, percent of total"
           },
           containerStyle: {
             borderShow: true,
@@ -265,6 +266,7 @@ function runMcpSession() {
       assert.equal(objs.title[0].properties.alignment.expr.Literal.Value, "'Center'");
       assert.equal(objs.title[0].properties.fontColor.solid.color.expr.Literal.Value, "'#D61A3C'");
       assert.equal(objs.labels[0].properties.show.expr.Literal.Value, "true");
+      assert.equal(objs.labels[0].properties.labelStyle.expr.Literal.Value, "'Category, percent of total'");
       assert.equal(objs.border[0].properties.show.expr.Literal.Value, "true");
       assert.equal(objs.border[0].properties.color.solid.color.expr.Literal.Value, "'#D61A3C'");
       assert.equal(objs.legend[0].properties.position.expr.Literal.Value, "'Right'");
