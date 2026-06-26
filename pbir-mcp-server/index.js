@@ -774,6 +774,74 @@ function buildVisualJson(visualType, fields, layout) {
         "projections": (Array.isArray(fields.yAxis || fields.value || fields.y) ? (fields.yAxis || fields.value || fields.y) : [fields.yAxis || fields.value || fields.y]).map(y => getFieldProjection(y))
       };
     }
+  } else if (visualType === 'stackedColumnChart' || visualType === 'stackedBarChart') {
+    if (fields.category || fields.xAxis) {
+      visualObj.visual.query.queryState.Category = {
+        "projections": (Array.isArray(fields.category || fields.xAxis) ? (fields.category || fields.xAxis) : [fields.category || fields.xAxis]).map(x => getFieldProjection(x))
+      };
+    }
+    if (fields.series) {
+      visualObj.visual.query.queryState.Series = { "projections": [getFieldProjection(fields.series)] };
+    }
+    if (fields.yAxis || fields.value || fields.y) {
+      visualObj.visual.query.queryState.Y = {
+        "projections": (Array.isArray(fields.yAxis || fields.value || fields.y) ? (fields.yAxis || fields.value || fields.y) : [fields.yAxis || fields.value || fields.y]).map(y => getFieldProjection(y))
+      };
+    }
+  } else if (visualType === 'hundredPercentStackedColumnChart' || visualType === 'hundredPercentStackedBarChart') {
+    if (fields.category || fields.xAxis) {
+      visualObj.visual.query.queryState.Category = {
+        "projections": (Array.isArray(fields.category || fields.xAxis) ? (fields.category || fields.xAxis) : [fields.category || fields.xAxis]).map(x => getFieldProjection(x))
+      };
+    }
+    if (fields.series) {
+      visualObj.visual.query.queryState.Series = { "projections": [getFieldProjection(fields.series)] };
+    }
+    if (fields.yAxis || fields.value || fields.y) {
+      visualObj.visual.query.queryState.Y = {
+        "projections": (Array.isArray(fields.yAxis || fields.value || fields.y) ? (fields.yAxis || fields.value || fields.y) : [fields.yAxis || fields.value || fields.y]).map(y => getFieldProjection(y))
+      };
+    }
+  } else if (visualType === 'multiRowCard') {
+    visualObj.visual.query.queryState.Values = {
+      "projections": (Array.isArray(fields.values) ? fields.values : (fields.value ? [fields.value] : [])).map(v => getFieldProjection(v))
+    };
+  } else if (visualType === 'basicShape') {
+    delete visualObj.visual.query;
+    visualObj.visual.objects = {
+      "shape": [
+        {
+          "properties": {
+            "shapeType": {
+              "expr": {
+                "Literal": {
+                  "Value": `'${fields.shapeType || 'Rectangle'}'`
+                }
+              }
+            }
+          }
+        }
+      ]
+    };
+  } else if (visualType === 'image') {
+    delete visualObj.visual.query;
+    if (fields.url) {
+      visualObj.visual.objects = {
+        "general": [
+          {
+            "properties": {
+              "imageUrl": {
+                "expr": {
+                  "Literal": {
+                    "Value": `'${fields.url}'`
+                  }
+                }
+              }
+            }
+          }
+        ]
+      };
+    }
   }
 
   return { visualName, visualObj };
@@ -1122,7 +1190,7 @@ const tools = {
     if (!activeReportPath) {
       throw new Error("No active report project connected. Call connect_project first.");
     }
-    const { pageId, template = 'dynamicGrid' } = args;
+    const { pageId, template = 'dynamicGrid', arrangeDecoratives = false } = args;
     if (!pageId) {
       throw new Error("Parameter 'pageId' is required.");
     }
@@ -1136,7 +1204,7 @@ const tools = {
       return fs.statSync(path.join(visualsDir, name)).isDirectory();
     });
 
-    const visuals = visualNames.map(name => {
+    let visuals = visualNames.map(name => {
       const jsonPath = path.join(visualsDir, name, 'visual.json');
       return {
         name,
@@ -1145,8 +1213,15 @@ const tools = {
       };
     });
 
+    if (!arrangeDecoratives) {
+      visuals = visuals.filter(v => {
+        const type = v.data.visual ? v.data.visual.visualType : 'group';
+        return type !== 'basicShape' && type !== 'image';
+      });
+    }
+
     if (visuals.length === 0) {
-      return { message: "No visuals found on this page." };
+      return { message: "No rearrangeable visuals found on this page." };
     }
 
     if (template === 'kpiHeader') {
@@ -2701,12 +2776,12 @@ rl.on('line', async (line) => {
                   },
                    visualType: {
                     type: "string",
-                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable", "treemap", "waterfallChart", "scatterChart", "gauge", "kpi", "funnel", "ribbonChart", "decompositionTree", "keyInfluencers", "map", "filledMap", "lineClusteredColumnComboChart", "lineStackedColumnComboChart", "areaChart", "stackedAreaChart"],
+                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable", "treemap", "waterfallChart", "scatterChart", "gauge", "kpi", "funnel", "ribbonChart", "decompositionTree", "keyInfluencers", "map", "filledMap", "lineClusteredColumnComboChart", "lineStackedColumnComboChart", "areaChart", "stackedAreaChart", "stackedColumnChart", "stackedBarChart", "hundredPercentStackedColumnChart", "hundredPercentStackedBarChart", "multiRowCard", "basicShape", "image"],
                     description: "The visual type chart."
                   },
                   fields: {
                     type: "object",
-                    description: "Field bindings. For card/gauge: {value: 'col', targetValue?: 'col', minimum?: 'col', maximum?: 'col'}. For chart/funnel/area: {xAxis/category/field: 'col', yAxis/y: ['col']}. For kpi: {value: 'col', trend: 'col', targetValue: 'col'}. For slicer: {field: 'col', isDropdown: bool}. For pie/donut: {legend: 'col', value: 'col'}. For table: {columns: ['col']}. For pivotTable: {rows: ['col'], columns: ['col'], values: ['col']}. For treemap: {group: 'col', value: 'col'}. For waterfallChart: {category: 'col', yAxis: 'col'}. For scatterChart: {series: 'col', xAxis: 'col', yAxis: 'col'}. For ribbonChart: {category: 'col', series: 'col', y: 'col'}. For decompositionTree/keyInfluencers: {analyze: 'col', explainBy: ['col']}. For map: {location: 'col', latitude?: 'col', longitude?: 'col', size?: 'col', legend?: 'col'}. For filledMap: {location: 'col', legend?: 'col', value: 'col'}. For combo chart: {xAxis: 'col', columnValues: ['col'], lineValues: ['col'], series?: 'col'}."
+                    description: "Field bindings. For card/gauge: {value: 'col', targetValue?: 'col', minimum?: 'col', maximum?: 'col'}. For chart/funnel/area/stackedChart: {xAxis/category/field/series?: 'col', yAxis/y?: ['col']}. For kpi: {value: 'col', trend: 'col', targetValue: 'col'}. For slicer: {field: 'col', isDropdown: bool}. For pie/donut: {legend: 'col', value: 'col'}. For table: {columns: ['col']}. For pivotTable: {rows: ['col'], columns: ['col'], values: ['col']}. For treemap: {group: 'col', value: 'col'}. For waterfallChart: {category: 'col', yAxis: 'col'}. For scatterChart: {series: 'col', xAxis: 'col', yAxis: 'col'}. For ribbonChart: {category: 'col', series: 'col', y: 'col'}. For decompositionTree/keyInfluencers: {analyze: 'col', explainBy: ['col']}. For map: {location: 'col', latitude?: 'col', longitude?: 'col', size?: 'col', legend?: 'col'}. For filledMap: {location: 'col', legend?: 'col', value: 'col'}. For combo chart: {xAxis: 'col', columnValues: ['col'], lineValues: ['col'], series?: 'col'}. For multiRowCard: {values: ['col']}. For basicShape: {shapeType?: 'Rectangle'|'Oval'}. For image: {url: 'path/url'}."
                   },
                   layout: {
                     type: "object",

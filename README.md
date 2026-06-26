@@ -15,11 +15,11 @@ A standalone Node.js MCP server that allows AI coding assistants and client tool
   * `connect_project`: Connects to a local `.Report` folder.
   * `list_pages`: Lists all report pages.
   * `create_page`: Creates a new report page with standard metadata.
-  * `add_visual`: Generates and adds visual containers (supporting column/bar/line/pie/donut/treemap/waterfall/scatter/area charts, cards, slicers, gauges, KPIs, funnels, ribbons, maps, and combo charts) using Fabric visual container schemas.
+  * `add_visual`: Generates and adds visual containers (supporting column/bar/line/pie/donut/treemap/waterfall/scatter/area charts, cards, slicers, gauges, KPIs, funnels, ribbons, maps, combo charts, stacked column/bar, 100% stacked column/bar, multi-row cards, basic shapes, and images) using Fabric visual container schemas.
   * `delete_visual`: Safe deletion of visuals.
   * `create_table`: Programmatically constructs Table or Pivot Table (Matrix) visuals.
   * `format_visual`: Overrides formatting properties inside `visual.json` (such as titles, labels, borders, legends, and axis settings) using Fabric expression-based single-quoted literals.
-  * `auto_arrange_page`: Auto-arranges all visuals on a page based on layout templates (`dynamicGrid`, `kpiHeader`, `splitScreen`, `alignLeft`, `alignTop`).
+  * `auto_arrange_page`: Auto-arranges all visuals on a page based on layout templates (`dynamicGrid`, `kpiHeader`, `splitScreen`, `alignLeft`, `alignTop`). Supports optional `arrangeDecoratives` flag (default `false`) to keep basic shapes and background images in place.
   * `add_action_button`: Adds interactive navigation or filter buttons.
   * `group_visuals`: Bundles multiple visuals together under a visual group container.
   * `sync_slicers`: Configures sync slicer options to enable cross-page filter sharing.

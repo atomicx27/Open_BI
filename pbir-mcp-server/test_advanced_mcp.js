@@ -133,7 +133,7 @@ function runMcpSession() {
       // Check the visualType enum has pieChart, donutChart, table, pivotTable
       const addVisualTool = tools.find(t => t.name === 'add_visual');
       const visualTypeEnum = addVisualTool.inputSchema.properties.visualType.enum;
-      const expectedVisualTypes = ['pieChart', 'donutChart', 'table', 'pivotTable', 'gauge', 'kpi', 'funnel', 'ribbonChart', 'decompositionTree', 'keyInfluencers', 'map', 'filledMap', 'lineClusteredColumnComboChart', 'lineStackedColumnComboChart', 'areaChart', 'stackedAreaChart'];
+      const expectedVisualTypes = ['pieChart', 'donutChart', 'table', 'pivotTable', 'gauge', 'kpi', 'funnel', 'ribbonChart', 'decompositionTree', 'keyInfluencers', 'map', 'filledMap', 'lineClusteredColumnComboChart', 'lineStackedColumnComboChart', 'areaChart', 'stackedAreaChart', 'stackedColumnChart', 'stackedBarChart', 'hundredPercentStackedColumnChart', 'hundredPercentStackedBarChart', 'multiRowCard', 'basicShape', 'image'];
       for (const vt of expectedVisualTypes) {
         assert(visualTypeEnum.includes(vt), `add_visual missing visualType enum: ${vt}`);
       }
@@ -749,6 +749,85 @@ function runMcpSession() {
       assert(comboJson.visual.query.queryState.Y);
       assert(comboJson.visual.query.queryState.Y2);
       console.log("✓ 'add_visual' (combo chart) success.");
+
+      // --- Category 1 Visual Type Generation Tests ---
+      console.log("Testing 'add_visual' for stackedColumnChart...");
+      const stackedResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "stackedColumnChart",
+          fields: {
+            xAxis: "financials.Country",
+            series: "financials.Segment",
+            yAxis: ["financials.Sales"]
+          }
+        }
+      });
+      assert(!stackedResp.result.isError);
+      const stackedId = JSON.parse(stackedResp.result.content[0].text).visualId;
+      const stackedJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', stackedId, 'visual.json'), 'utf8'));
+      assert.equal(stackedJson.visual.visualType, "stackedColumnChart");
+      assert(stackedJson.visual.query.queryState.Category);
+      assert(stackedJson.visual.query.queryState.Series);
+      assert(stackedJson.visual.query.queryState.Y);
+      console.log("✓ 'add_visual' (stackedColumnChart) success.");
+
+      console.log("Testing 'add_visual' for multiRowCard...");
+      const mrcResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "multiRowCard",
+          fields: {
+            values: ["financials.Sales", "financials.Profit"]
+          }
+        }
+      });
+      assert(!mrcResp.result.isError);
+      const mrcId = JSON.parse(mrcResp.result.content[0].text).visualId;
+      const mrcJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', mrcId, 'visual.json'), 'utf8'));
+      assert.equal(mrcJson.visual.visualType, "multiRowCard");
+      assert.equal(mrcJson.visual.query.queryState.Values.projections.length, 2);
+      console.log("✓ 'add_visual' (multiRowCard) success.");
+
+      console.log("Testing 'add_visual' for basicShape...");
+      const shapeResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "basicShape",
+          fields: {
+            shapeType: "Oval"
+          }
+        }
+      });
+      assert(!shapeResp.result.isError);
+      const shapeId = JSON.parse(shapeResp.result.content[0].text).visualId;
+      const shapeJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', shapeId, 'visual.json'), 'utf8'));
+      assert.equal(shapeJson.visual.visualType, "basicShape");
+      assert.equal(shapeJson.visual.objects.shape[0].properties.shapeType.expr.Literal.Value, "'Oval'");
+      assert(!shapeJson.visual.query, "basicShape should not have a query block");
+      console.log("✓ 'add_visual' (basicShape) success.");
+
+      console.log("Testing 'add_visual' for image...");
+      const imageResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "image",
+          fields: {
+            url: "StaticResources/RegisteredResources/logo.png"
+          }
+        }
+      });
+      assert(!imageResp.result.isError);
+      const imageId = JSON.parse(imageResp.result.content[0].text).visualId;
+      const imageJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', imageId, 'visual.json'), 'utf8'));
+      assert.equal(imageJson.visual.visualType, "image");
+      assert.equal(imageJson.visual.objects.general[0].properties.imageUrl.expr.Literal.Value, "'StaticResources/RegisteredResources/logo.png'");
+      assert(!imageJson.visual.query, "image should not have a query block");
+      console.log("✓ 'add_visual' (image) success.");
 
       // 14. Delete Visual
       console.log("Testing 'delete_visual'...");
