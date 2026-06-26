@@ -536,9 +536,9 @@ function buildVisualJson(visualType, fields, layout) {
   } else if (visualType === 'stackedBarChart') {
     internalVisualType = 'barChart';
   } else if (visualType === 'decompositionTree') {
-    internalVisualType = 'decompositionTreeVisual';
+    internalVisualType = 'decompositionTree';
   } else if (visualType === 'keyInfluencers') {
-    internalVisualType = 'keyInfluencersVisual';
+    internalVisualType = 'keyInfluencers';
   } else if (visualType === 'map' || visualType === 'filledMap') {
     internalVisualType = 'azureMap';
   }
@@ -712,10 +712,10 @@ function buildVisualJson(visualType, fields, layout) {
     }
   } else if (visualType === 'decompositionTree') {
     if (fields.analyze) {
-      visualObj.visual.query.queryState.Y = { "projections": [getFieldProjection(fields.analyze)] };
+      visualObj.visual.query.queryState.Analyze = { "projections": [getFieldProjection(fields.analyze)] };
     }
     if (fields.explainBy) {
-      visualObj.visual.query.queryState.Category = {
+      visualObj.visual.query.queryState.ExplainBy = {
         "projections": (Array.isArray(fields.explainBy) ? fields.explainBy : [fields.explainBy]).map(e => getFieldProjection(e))
       };
     }

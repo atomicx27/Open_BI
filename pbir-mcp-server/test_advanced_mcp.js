@@ -703,10 +703,30 @@ function runMcpSession() {
       assert(!dtResp.result.isError);
       const dtId = JSON.parse(dtResp.result.content[0].text).visualId;
       const dtJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', dtId, 'visual.json'), 'utf8'));
-      assert.equal(dtJson.visual.visualType, "decompositionTreeVisual");
-      assert(dtJson.visual.query.queryState.Y);
-      assert.equal(dtJson.visual.query.queryState.Category.projections.length, 2);
+      assert.equal(dtJson.visual.visualType, "decompositionTree");
+      assert(dtJson.visual.query.queryState.Analyze);
+      assert.equal(dtJson.visual.query.queryState.ExplainBy.projections.length, 2);
       console.log("✓ 'add_visual' (decompositionTree) success.");
+
+      console.log("Testing 'add_visual' for keyInfluencers...");
+      const kiResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "keyInfluencers",
+          fields: {
+            analyze: "financials.Sales",
+            explainBy: ["financials.Country", "financials.Segment"]
+          }
+        }
+      });
+      assert(!kiResp.result.isError);
+      const kiId = JSON.parse(kiResp.result.content[0].text).visualId;
+      const kiJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', kiId, 'visual.json'), 'utf8'));
+      assert.equal(kiJson.visual.visualType, "keyInfluencers");
+      assert(kiJson.visual.query.queryState.Analyze);
+      assert.equal(kiJson.visual.query.queryState.ExplainBy.projections.length, 2);
+      console.log("✓ 'add_visual' (keyInfluencers) success.");
 
       console.log("Testing 'add_visual' for map...");
       const mapResp = await sendRequest('tools/call', {
