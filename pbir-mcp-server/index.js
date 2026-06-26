@@ -46,7 +46,12 @@ function findReportInWorkspace(dir) {
   return null;
 }
 
-const knownMeasures = ['Total Sales', 'Sales YoY Growth', 'Total Profit', 'Profit Margin', 'Profit YoY Growth', 'Average Units Sold', 'Total COGS'];
+const knownMeasures = [
+  'Total Sales', 'Sales YoY Growth', 'Total Profit', 'Profit Margin', 
+  'Profit YoY Growth', 'Average Units Sold', 'Total COGS', 'Total Units Sold',
+  'Sales MTD', 'Profit MTD', 'Sales QTD', 'Profit QTD',
+  'Sales YTD', 'Profit YTD', 'Sales 3M Rolling', 'Profit 3M Rolling'
+];
 function getFieldProjection(queryRef) {
   const parts = queryRef.split('.');
   const entity = parts[0];
@@ -164,6 +169,48 @@ function buildVisualJson(visualType, fields, layout) {
     if (fields.values) {
       visualObj.visual.query.queryState.Values = {
         "projections": (Array.isArray(fields.values) ? fields.values : [fields.values]).map(v => getFieldProjection(v))
+      };
+    }
+  } else if (visualType === 'treemap') {
+    const groupField = fields.group || fields.category;
+    if (groupField) {
+      visualObj.visual.query.queryState.Group = {
+        "projections": [getFieldProjection(groupField)]
+      };
+    }
+    const valueField = fields.value || fields.values;
+    if (valueField) {
+      visualObj.visual.query.queryState.Values = {
+        "projections": [getFieldProjection(valueField)]
+      };
+    }
+  } else if (visualType === 'waterfallChart') {
+    const categoryField = fields.category || fields.xAxis;
+    if (categoryField) {
+      visualObj.visual.query.queryState.Category = {
+        "projections": [getFieldProjection(categoryField)]
+      };
+    }
+    const yField = fields.yAxis || fields.y || fields.value;
+    if (yField) {
+      visualObj.visual.query.queryState.Y = {
+        "projections": (Array.isArray(yField) ? yField : [yField]).map(y => getFieldProjection(y))
+      };
+    }
+  } else if (visualType === 'scatterChart') {
+    if (fields.series || fields.details) {
+      visualObj.visual.query.queryState.Series = {
+        "projections": [getFieldProjection(fields.series || fields.details)]
+      };
+    }
+    if (fields.x || fields.xAxis) {
+      visualObj.visual.query.queryState.X = {
+        "projections": [getFieldProjection(fields.x || fields.xAxis)]
+      };
+    }
+    if (fields.y || fields.yAxis) {
+      visualObj.visual.query.queryState.Y = {
+        "projections": [getFieldProjection(fields.y || fields.yAxis)]
       };
     }
   }
@@ -774,6 +821,223 @@ const tools = {
 
     fs.writeFileSync(visualJsonPath, JSON.stringify(visualObj, null, 2), 'utf8');
     return { message: `Slicer '${visualId}' sync settings updated.` };
+  },
+
+  apply_theme: (args) => {
+    if (!activeReportPath) {
+      throw new Error("No active report project connected. Call connect_project first.");
+    }
+    const { themeName, colors, themeJson } = args;
+    if (!themeName) {
+      throw new Error("Parameter 'themeName' is required.");
+    }
+
+    const baseThemesDir = path.join(activeReportPath, 'StaticResources', 'SharedResources', 'BaseThemes');
+    const registeredResourcesDir = path.join(activeReportPath, 'StaticResources', 'RegisteredResources');
+    if (!fs.existsSync(registeredResourcesDir)) {
+      fs.mkdirSync(registeredResourcesDir, { recursive: true });
+    }
+
+    let themeData = {};
+    if (themeJson) {
+      themeData = themeJson;
+    } else {
+      const baseThemePath = path.join(baseThemesDir, 'CY26SU05.json');
+      if (fs.existsSync(baseThemePath)) {
+        themeData = JSON.parse(fs.readFileSync(baseThemePath, 'utf8'));
+      } else {
+        themeData = {
+          "name": themeName,
+          "dataColors": ["#118DFF", "#12239E", "#E66C37", "#6B007B", "#E044A7"],
+          "foreground": "#252423",
+          "background": "#FFFFFF"
+        };
+      }
+    }
+
+    themeData.name = themeName;
+    if (colors && Array.isArray(colors)) {
+      if (!themeData.dataColors) themeData.dataColors = [];
+      for (let i = 0; i < colors.length; i++) {
+        themeData.dataColors[i] = colors[i];
+      }
+      themeData.tableAccent = colors[0];
+      themeData.maximum = colors[0];
+      themeData.hyperlink = colors[0];
+      themeData.visitedHyperlink = colors[0];
+    }
+
+    const targetThemePath = path.join(registeredResourcesDir, `${themeName}.json`);
+    fs.writeFileSync(targetThemePath, JSON.stringify(themeData, null, 2), 'utf8');
+    log(`Saved theme file to: ${targetThemePath}`);
+
+    const reportJsonPath = path.join(activeReportPath, 'definition', 'report.json');
+    if (fs.existsSync(reportJsonPath)) {
+      const reportData = JSON.parse(fs.readFileSync(reportJsonPath, 'utf8'));
+      
+      if (!reportData.themeCollection) {
+        reportData.themeCollection = {};
+      }
+      reportData.themeCollection.customTheme = {
+        "name": themeName,
+        "reportVersionAtImport": {
+          "visual": "2.9.0",
+          "report": "3.3.0",
+          "page": "2.3.1"
+        },
+        "type": "RegisteredResources"
+      };
+
+      if (!Array.isArray(reportData.resourcePackages)) {
+        reportData.resourcePackages = [];
+      }
+
+      const registeredPkgIdx = reportData.resourcePackages.findIndex(pkg => pkg.name === 'RegisteredResources');
+      const themeItem = {
+        "name": themeName,
+        "path": `RegisteredResources/${themeName}.json`,
+        "type": "CustomTheme"
+      };
+
+      if (registeredPkgIdx === -1) {
+        reportData.resourcePackages.push({
+          "name": "RegisteredResources",
+          "type": "RegisteredResources",
+          "items": [themeItem]
+        });
+      } else {
+        const pkg = reportData.resourcePackages[registeredPkgIdx];
+        if (!Array.isArray(pkg.items)) {
+          pkg.items = [];
+        }
+        const itemIdx = pkg.items.findIndex(item => item.name === themeName);
+        if (itemIdx === -1) {
+          pkg.items.push(themeItem);
+        } else {
+          pkg.items[itemIdx] = themeItem;
+        }
+      }
+
+      fs.writeFileSync(reportJsonPath, JSON.stringify(reportData, null, 2), 'utf8');
+      log(`Updated report.json successfully at: ${reportJsonPath}`);
+    } else {
+      logError(`report.json not found at ${reportJsonPath}`);
+    }
+
+    return {
+      message: `Theme '${themeName}' applied and registered successfully.`,
+      themePath: targetThemePath
+    };
+  },
+
+  audit_layout: (args) => {
+    if (!activeReportPath) {
+      throw new Error("No active report project connected. Call connect_project first.");
+    }
+    const { pageId, spacing = 20, autoFix = true } = args;
+    if (!pageId) {
+      throw new Error("Parameter 'pageId' is required.");
+    }
+
+    const visualsDir = path.join(activeReportPath, 'definition', 'pages', pageId, 'visuals');
+    if (!fs.existsSync(visualsDir)) {
+      return { message: "No visuals folder found on this page.", overlaps: [], fixed: false };
+    }
+
+    const visualNames = fs.readdirSync(visualsDir).filter(name => {
+      return fs.statSync(path.join(visualsDir, name)).isDirectory();
+    });
+
+    const visuals = visualNames.map(name => {
+      const jsonPath = path.join(visualsDir, name, 'visual.json');
+      return {
+        name,
+        path: jsonPath,
+        data: JSON.parse(fs.readFileSync(jsonPath, 'utf8'))
+      };
+    });
+
+    if (visuals.length === 0) {
+      return { message: "No visuals found on this page.", overlaps: [], fixed: false };
+    }
+
+    function getOverlap(v1, v2) {
+      const p1 = v1.data.position;
+      const p2 = v2.data.position;
+      if (!p1 || !p2) return null;
+      
+      const xOverlap = p1.x < p2.x + p2.width && p1.x + p1.width > p2.x;
+      const yOverlap = p1.y < p2.y + p2.height && p1.y + p1.height > p2.y;
+      
+      if (xOverlap && yOverlap) {
+        const xLen = Math.min(p1.x + p1.width, p2.x + p2.width) - Math.max(p1.x, p2.x);
+        const yLen = Math.min(p1.y + p1.height, p2.y + p2.height) - Math.max(p1.y, p2.y);
+        return xLen * yLen;
+      }
+      return null;
+    }
+
+    let overlapsDetected = [];
+    let iterations = 0;
+    const maxIterations = 100;
+    let changed = false;
+
+    while (iterations < maxIterations) {
+      let overlapFound = false;
+      overlapsDetected = [];
+
+      for (let i = 0; i < visuals.length; i++) {
+        for (let j = i + 1; j < visuals.length; j++) {
+          const v1 = visuals[i];
+          const v2 = visuals[j];
+          const area = getOverlap(v1, v2);
+          if (area !== null) {
+            overlapFound = true;
+            overlapsDetected.push({
+              visualA: v1.name,
+              visualB: v2.name,
+              area: area
+            });
+
+            if (autoFix) {
+              const p1 = v1.data.position;
+              const p2 = v2.data.position;
+              
+              if (p2.y > p1.y) {
+                p2.y = p1.y + p1.height + spacing;
+              } else if (p1.y > p2.y) {
+                p1.y = p2.y + p2.height + spacing;
+              } else {
+                if (p2.x >= p1.x) {
+                  p2.y = p1.y + p1.height + spacing;
+                } else {
+                  p1.y = p2.y + p2.height + spacing;
+                }
+              }
+              changed = true;
+            }
+          }
+        }
+      }
+
+      if (!overlapFound || !autoFix) {
+        break;
+      }
+      iterations++;
+    }
+
+    if (changed && autoFix) {
+      visuals.forEach(v => {
+        fs.writeFileSync(v.path, JSON.stringify(v.data, null, 2), 'utf8');
+      });
+    }
+
+    return {
+      message: changed ? `Resolved visual overlaps on page '${pageId}' after ${iterations} iterations.` : `Audited layout for page '${pageId}'.`,
+      overlaps: overlapsDetected,
+      fixed: changed,
+      iterations: iterations
+    };
   }
 };
 
@@ -865,12 +1129,12 @@ rl.on('line', (line) => {
                   },
                   visualType: {
                     type: "string",
-                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable"],
+                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable", "treemap", "waterfallChart", "scatterChart"],
                     description: "The visual type chart."
                   },
                   fields: {
                     type: "object",
-                    description: "Field bindings. For card: {value: 'table.column'}. For chart: {xAxis: 'table.col', yAxis: ['table.col']}. For slicer: {field: 'table.col', isDropdown: true/false}. For pie/donut: {legend: 'table.col', value: 'table.col'}. For table: {columns: ['table.col']}. For pivotTable: {rows: ['table.col'], columns: ['table.col'], values: ['table.col']}."
+                    description: "Field bindings. For card: {value: 'table.column'}. For chart: {xAxis: 'table.col', yAxis: ['table.col']}. For slicer: {field: 'table.col', isDropdown: true/false}. For pie/donut: {legend: 'table.col', value: 'table.col'}. For table: {columns: ['table.col']}. For pivotTable: {rows: ['table.col'], columns: ['table.col'], values: ['table.col']}. For treemap: {group: 'table.col', value: 'table.col'}. For waterfallChart: {category: 'table.col', yAxis: 'table.col'}. For scatterChart: {series: 'table.col', xAxis: 'table.col', yAxis: 'table.col'}."
                   },
                   layout: {
                     type: "object",
@@ -1073,6 +1337,51 @@ rl.on('line', (line) => {
                   }
                 },
                 required: ["pageId", "visualId"]
+              }
+            },
+            {
+              name: "apply_theme",
+              description: "Registers a custom color palette theme into the project's report.json and copies the theme file.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  themeName: {
+                    type: "string",
+                    description: "Unique name of the theme to create/apply."
+                  },
+                  colors: {
+                    type: "array",
+                    items: { "type": "string" },
+                    description: "List of hex color codes to override the default theme dataColors."
+                  },
+                  themeJson: {
+                    type: "object",
+                    description: "Optional complete theme definition JSON object."
+                  }
+                },
+                required: ["themeName"]
+              }
+            },
+            {
+              name: "audit_layout",
+              description: "Scans all visual positions on a page, identifies overlaps, and optionally auto-shifts overlapping visuals to resolve layout collisions.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  pageId: {
+                    type: "string",
+                    description: "Page ID containing the visuals to audit."
+                  },
+                  spacing: {
+                    type: "integer",
+                    description: "The spacing distance in pixels to maintain between shifted visuals. Defaults to 20."
+                  },
+                  autoFix: {
+                    type: "boolean",
+                    description: "True to automatically resolve overlaps and update visual coordinate files. Defaults to true."
+                  }
+                },
+                required: ["pageId"]
               }
             }
           ]
