@@ -1,7 +1,7 @@
 {
-  "name": "powerbi-report-layout-mcp",
+  "name": "open-bi-mcp",
   "version": "1.0.0",
-  "description": "Custom MCP server for Power BI PBIR report visual and page generation",
+  "description": "Open BI: Custom MCP server for Power BI PBIR/TMDL layout and model automation",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {

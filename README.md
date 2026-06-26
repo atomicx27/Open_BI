@@ -1,97 +1,110 @@
-# PowerBI-Automation
+# Open BI: Local & Automated Power BI Developer Operations
 
-A workspace and custom Model Context Protocol (MCP) server for automated, programmatic Power BI report layout generation, modeling, and dashboard syncing using Microsoft Fabric's new folder-based PBIR/TMDL formats.
+![Open BI Logo](open_bi_logo.png)
+
+**Open BI** is an open-source, local-first Model Context Protocol (MCP) server for programmatic Power BI report layout generation, tabular modeling, and version-controlled developer operations. 
+
+By interfacing directly with Microsoft Fabric's new text-based report structures (**PBIR**) and Tabular Model Definition Language (**TMDL**), **Open BI** enables AI coding assistants (like VS Code, Cursor, and Claude Desktop) to design dashboards, run layout algorithms, insert DAX measures, and manage report states directly on local folders (`.pbip`).
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Custom Power BI Report Layout MCP Server (`pbir-mcp-server`)
-A standalone Node.js MCP server that allows AI coding assistants and client tools to programmatically manage pages, themes, and visual layouts on local Power BI Projects (`.pbip`).
-* **Visual Projections & Drilldowns:** Supports advanced visual query projections (projections list mappings for metrics vs dimensions). Enables **hierarchical axis mappings** (arrays in axes) for native **drilldown/drillup** visual interactions.
-* **Layout Collision Fixer (`audit_layout`):** Automatically audits page layout bounding boxes, identifies overlapping elements, and auto-shifts overlaps down recursively to maintain clean alignments.
-* **Dynamic Theme Registry (`apply_theme`):** Registers custom user-defined color themes in `report.json` and copies asset resources dynamically to ensure Power BI Desktop reloads them from disk.
-* **Exposed Core Layout Tools:**
-  * `connect_project`: Connects to a local `.Report` folder.
-  * `list_pages`: Lists all report pages.
-  * `create_page`: Creates a new report page with standard metadata.
-  * `add_visual`: Generates and adds visual containers (supporting column/bar/line/pie/donut/treemap/waterfall/scatter/area charts, cards, slicers, gauges, KPIs, funnels, ribbons, maps, combo charts, stacked column/bar, 100% stacked column/bar, multi-row cards, basic shapes, and images) using Fabric visual container schemas.
-  * `delete_visual`: Safe deletion of visuals.
-  * `create_table`: Programmatically constructs Table or Pivot Table (Matrix) visuals.
-  * `format_visual`: Overrides formatting properties inside `visual.json` (such as titles, labels, borders, legends, and axis settings) using Fabric expression-based single-quoted literals.
-  * `auto_arrange_page`: Auto-arranges all visuals on a page based on layout templates (`dynamicGrid`, `kpiHeader`, `splitScreen`, `alignLeft`, `alignTop`). Supports optional `arrangeDecoratives` flag (default `false`) to keep basic shapes and background images in place.
-  * `add_action_button`: Adds interactive navigation or filter buttons.
-  * `group_visuals`: Bundles multiple visuals together under a visual group container.
-  * `sync_slicers`: Configures sync slicer options to enable cross-page filter sharing.
-  * `apply_theme`: Registers a custom color palette theme in `report.json`.
-  * `audit_layout`: Scans and auto-resolves visual overlaps.
+### 1. Enhanced Report Layout Automation (PBIR)
+* **31+ Native Visual Types:** Instantiates and places everything from standard charts (Column, Bar, Line, Pie, Donut, Treemap, Waterfall, Combo) to advanced AI visuals (`decompositionTree`, `keyInfluencers`), maps (`azureMap`), gauges, KPIs, basic shapes, and images.
+* **Layout Collision Auditor (`audit_layout`):** Scans the coordinates of all visual containers on a page, identifies overlaps, and automatically shifts elements downward to preserve clean, grid-aligned page hierarchies.
+* **Modern Style Presets:** Instantly applies unified visual themes (such as `glassmorphism`, `darkMinimal`, `neonGradient`, `orangeBrand`, and `redCorporate`) to cards, slicers, and containers, which merge with custom styling overrides.
+* **Button Slicer Grid Auto-Sensing:** Configures the modern `advancedSlicerVisual` grid layouts, dynamically selecting rows/columns based on the visual's aspect ratio.
 
-* **Exposed Advanced Modeling & DevOps Tools (MCP Server v2 Upgrades):**
-  * **Phase 1: Modeling & DAX Foundation**
-    * `create_date_table`: Generates a proper Date dimension table as a DAX calculated table supporting custom fiscal years.
-    * `create_calculated_column`: Adds DAX calculated columns to an existing table's TMDL definition.
-    * `validate_measures`: Health-checks all measures in the connected semantic model (syntax or execution depth).
-    * `create_kpi`: Defines KPI objects with targets, status thresholds, and trend references.
-  * **Phase 2: High-Impact Productivity**
-    * `clone_page`: Duplicates an entire page with all visuals and coordinates within the same project.
-    * `duplicate_visual`: Clones a visual to the same or different page with offsets.
-    * `set_conditional_formatting`: Applies data-driven color or icon rules to visuals.
-    * `add_bookmark`: Creates report bookmarks for storytelling or state capture.
-    * `export_page_summary`: Generates a structured JSON/Markdown manifest of page elements.
-  * **Phase 3: Layout & UX Intelligence**
-    * `set_page_background`: Configures solid color or image wallpaper backgrounds.
-    * `manage_filters`: Programmatically adds, removes, or clears filters at visual, page, or report level.
-    * `set_visual_interactions`: Controls cross-filtering and cross-highlighting behavior between visuals.
-    * `add_tooltip_page`: Creates a custom tooltip page that appears on hover.
-  * **Phase 4: DevOps & Governance**
-    * `snapshot_report`: Creates a timestamped backup of the entire report folder.
-    * `diff_reports`: Compares two report folders or a report against a snapshot and produces a structured diff.
-    * `validate_report`: Lints the entire report structure for consistency and correctness.
-
-### 2. Time Intelligence DAX Modeling
-Adds robust, aggregated time intelligence DAX calculations to tabular definition TMDL files on disk and synchronizes active Analysis Services sessions in-memory:
-* **MTD / QTD / YTD Measures:** `Sales MTD`, `Profit MTD`, `Sales QTD`, `Profit QTD`, `Sales YTD`, and `Profit YTD`.
-* **Rolling Averages:** `Sales 3M Rolling` and `Profit 3M Rolling`.
-* **Robust YoY Growth:** `Sales YoY Growth` and `Profit YoY Growth` implemented using `SAMEPERIODLASTYEAR` to calculate rates correctly at both card-level aggregate views and sliced hierarchies.
-
-### 3. YoY Sales Growth HTML Dashboard (`dashboard.html`)
-An interactive, responsive HTML5 dashboard mirroring the Power BI project's metrics:
-* Visualized using **Chart.js**.
-* Styled following a premium dark/light layout that supports corporate color themes.
-* Features responsive metrics, double-line monthly trend series, and interactive YoY KPI widgets.
+### 2. DevOps & Governance (TMDL)
+* **Calculated Date Tables:** Dynamically generates calendar and date dimension tables with custom fiscal year starting months, complete with relationships injected directly into TMDL files.
+* **Calculated Columns & Measures:** Programmatically appends DAX measures (YTD, MTD, Rolling Averages, and SAMEPERIODLASTYEAR YoY rates) and calculated columns to tables.
+* **DevOps Snapshots:** Captures timestamped backups of your layout configuration folders.
+* **Report Diffing:** Generates clear markdown comparisons showing structural additions, deletions, or coordinate moves between active layouts and snapshots.
+* **Structural Linter:** Checks the entire `.Report` directory tree, ensuring schema consistency and producing 0-issue, clean compiles.
 
 ---
 
-## 🛠️ Getting Started
+## ⚔️ Comparison: Open BI vs. Power BI Copilot
 
-### Prerequisites
-* [Node.js](https://nodejs.org/) (v16+)
-* [Power BI Desktop](https://powerbi.microsoft.com/desktop/) (with Developer mode enabled for `.pbip` saves).
+While Microsoft's built-in **Power BI Copilot** provides basic conversational assistance, it lacks the developer-centric, source-controlled workflows required for real-world report engineering.
 
-### Running the Custom Layout MCP Server
-1. Navigate to the server folder:
-   ```bash
-   cd pbir-mcp-server
-   ```
-2. Install dependencies (none required, standard Node.js libraries only):
-   ```bash
-   npm install
-   ```
-3. Start the server (runs via stdin/stdout JSON-RPC protocol):
-   ```bash
-   node index.js
-   ```
-4. Run the advanced automated test suite to verify the server's functionality:
-   ```bash
-   node test_advanced_mcp.js
-   ```
+| Feature / Capability | Microsoft Power BI Copilot | Open BI |
+| :--- | :--- | :--- |
+| **Execution Context** | Closed cloud service (requires Microsoft Fabric capacity or Premium licenses) | **100% Local & Free** (runs on a local Node.js environment, no subscriptions) |
+| **IDE & Client Integration** | Closed sandbox pane inside Power BI Desktop/Web | **Standard MCP Server** (connects directly to VS Code, Cursor, Claude Desktop, etc.) |
+| **Source Control & Git** | None (operates on active session memory, ignored by Git) | **Git-First** (creates human-readable, commit-friendly PBIR and TMDL folder trees) |
+| **Layout Management** | Manual (Copilot frequently drops visuals on top of each other) | **Offline Grid Layouts** (dynamic grid arranging and overlap solver) |
+| **Semantic Modeling** | Limited to verbal measure suggestion | **Automated TMDL Modeling** (injects date tables, calculated columns, relationships, and KPIs) |
+| **Aesthetic Theme Presets** | Default styles only | **Modern Design Sheets** (`glassmorphism`, `darkMinimal`, `neonGradient` presets) |
+| **Version Control & DevOps** | None | **DevOps Tooling** (visual snapshotting, report diffing, and folder structural auditing) |
 
-### Registering with AI Clients (e.g., Claude Desktop)
-Add the following configuration to your global `mcp_config.json` or Claude desktop config:
+---
+
+## 🏗️ System Architecture
+
+**Open BI** operates as a JSON-RPC gateway bridge, translating instructions from your local IDE (acting as the MCP client) into disk-level adjustments inside your Power BI Project folder.
+
+```mermaid
+graph TD
+    subgraph IDE_Client [MCP Clients e.g. VS Code, Cursor, Claude]
+        Agent[AI Coding Agent]
+    end
+
+    subgraph Open_BI_MCP [Open BI MCP Server]
+        RPC[JSON-RPC Parser]
+        LayoutEngine[Layout & Coordinate Solver]
+        TMDLEngine[TMDL Parser & relationship Injector]
+    end
+
+    subgraph local_disk [Local Workspace Files]
+        PBIP[sales.pbip File]
+        Report[Report Folder: definition/pages/visual.json]
+        Model[Model Folder: definition/tables/table.tmdl]
+    end
+
+    Agent -- JSON-RPC Protocol --> RPC
+    RPC -- Visual Requests --> LayoutEngine
+    RPC -- Modeling Requests --> TMDLEngine
+    LayoutEngine -- Modifies Layouts --> Report
+    TMDLEngine -- Modifies Semantic Schema --> Model
+    Report -. Merged into .- PBIP
+    Model -. Merged into .- PBIP
+```
+
+---
+
+## 🛠️ Step-by-Step Installation
+
+### System Requirements
+* **Node.js:** Version 16 or higher installed on your machine.
+* **Power BI Desktop:** Enhanced Report Format (PBIR) enabled (File > Options and settings > Options > Preview features > Store reports using Enhanced Report Format (PBIR)).
+
+### 1. Download & Build Open BI
+Clone or copy the **Open BI** project files into your local developer workspace:
+
+```bash
+# Navigate to the server folder
+cd pbir-mcp-server
+
+# Install dependencies (none required, standard Node.js runtime libraries only)
+npm install
+```
+
+### 2. Verify Your Local Environment
+Run the automated advanced offline test suite to ensure the layout solver and TMDL parsers are functioning correctly on your machine:
+
+```bash
+node test_advanced_mcp.js
+```
+
+### 3. Register with Your IDE (e.g., Claude Desktop)
+Add the **Open BI** server details to your global Model Context Protocol configuration file (typically located at `%APPDATA%\Claude\claude_desktop_config.json`):
+
 ```json
 {
   "mcpServers": {
-    "powerbi-report-layout-mcp": {
+    "open-bi": {
       "command": "node",
       "args": [
         "C:/Users/GTXS3893/.gemini/antigravity/scratch/PowerBi-Automation/pbir-mcp-server/index.js"
@@ -100,145 +113,33 @@ Add the following configuration to your global `mcp_config.json` or Claude deskt
   }
 }
 ```
+*(Replace the absolute path above with the exact location of the server's `index.js` file on your machine).*
 
 ---
 
-## 📖 MCP Tool Usage Examples
+## 📖 MCP Tool Reference
 
-Clients and LLM agents can interact with the server by sending standard JSON-RPC `tools/call` requests.
+Once connected, your AI assistant will have access to the following programmatic tools:
 
-### 1. Connect to Project
-Connects the server session to a local report directory:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "connect_project",
-    "arguments": {
-      "projectPath": "C:\\Users\\GTXS3893\\OneDrive - orange.com\\Bureau\\sales.Report"
-    }
-  },
-  "id": 1
-}
-```
+### Project Connections
+* `connect_project`: Scans and opens a local `.Report` folder.
 
-### 2. Add Drilldown Column Chart
-Creates a visual featuring a hierarchy on the axis (enabling drilldown):
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "add_visual",
-    "arguments": {
-      "pageId": "dabb1b8c934713b3a9af",
-      "visualType": "clusteredColumnChart",
-      "fields": {
-        "xAxis": ["financials.Country", "financials.Segment", "financials.Product"],
-        "yAxis": ["financials.Total Profit"]
-      },
-      "layout": { "x": 30, "y": 150, "width": 600, "height": 260 }
-    }
-  },
-  "id": 2
-}
-```
+### Layout & Page Management
+* `create_page`: Generates a new report page folder and metadata.
+* `add_visual`: Instantiates a visual container (supporting 31+ visual types).
+* `create_table`: Constructs Pivot Tables (Matrix) and standard Tables.
+* `format_visual`: Modifies backgrounds, titles, borders, data labels, and presets (`glassmorphism`, `darkMinimal`, etc.).
+* `auto_arrange_page`: Auto-positions visuals using page grid templates.
+* `group_visuals`: Groups visual containers together.
+* `sync_slicers`: Configures slicer syncing.
 
-### 3. Audit and Resolve Coordinate Overlaps
-Automatically audits page layouts and resolves overlapping visuals:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "audit_layout",
-    "arguments": {
-      "pageId": "dabb1b8c934713b3a9af",
-      "spacing": 20,
-      "autoFix": true
-    }
-  },
-  "id": 3
-}
-```
+### Modeling & Calculations
+* `create_date_table`: Generates a standard DAX calendar table.
+* `create_calculated_column`: Appends columns to tables.
+* `validate_measures`: Offline and online syntax validations.
+* `create_kpi`: Registers KPI objects.
 
-### 4. Apply Custom Color Theme
-Registers a custom theme and copies assets dynamically:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "apply_theme",
-    "arguments": {
-      "themeName": "ProfitRedTheme",
-      "colors": ["#D61A3C", "#FF4D4D", "#FFEBEB"]
-    }
-  },
-  "id": 4
-}
-```
-
-### 5. Generate Date Table with Fiscal Year
-Generates a calculated date table with relationships in TMDL:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "create_date_table",
-    "arguments": {
-      "tableName": "DateTable",
-      "startDate": "2013-01-01",
-      "endDate": "2014-12-31",
-      "fiscalYearStartMonth": 4,
-      "relationshipColumn": "financials.Date"
-    }
-  },
-  "id": 5
-}
-```
-
-### 6. Snapshot & Diff Reports
-DevOps capabilities to backup report changes and compare them:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "snapshot_report",
-    "arguments": {
-      "label": "before-theme-change"
-    }
-  },
-  "id": 6
-}
-```
-And then compare the active report to that snapshot:
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "diff_reports",
-    "arguments": {
-      "sourcePath": "C:\\Users\\GTXS3893\\OneDrive - orange.com\\Bureau\\sales.Report\\.snapshots\\snapshot_2026-06-26T08-44-24-591Z_before-theme-change",
-      "format": "markdown"
-    }
-  },
-  "id": 7
-}
-```
-
----
-
-## 📁 Repository Structure
-
-* `pbir-mcp-server/`: Custom layout automation server codebase.
-* `dashboard.html`: Interactive web replica of the dashboard.
-* `add_discount_visual.js`: Sample script programmatically injecting visuals into the PBIR folder structure.
-* `inspect_model.js` & `inspect_table.js`: Model diagnostics and schema discovery.
-* `create_time_intelligence_measures.js`: In-memory time intelligence DAX measure creation.
-* `build_extended_visuals_demo.js`: Test validation script showcasing treemaps, waterfall charts, and custom layout audits.
-* `build_profit_drilldown_dashboard.js`: Script for generating the Profit Dashboard with native drilldown.
+### DevOps Operations
+* `snapshot_report`: Backs up layout folders.
+* `diff_reports`: Compares report structures and layouts.
+* `validate_report`: Audits the directory tree for schema validation.
