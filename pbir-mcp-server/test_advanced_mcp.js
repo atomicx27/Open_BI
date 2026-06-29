@@ -703,7 +703,7 @@ function runMcpSession() {
       assert(!dtResp.result.isError);
       const dtId = JSON.parse(dtResp.result.content[0].text).visualId;
       const dtJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', dtId, 'visual.json'), 'utf8'));
-      assert.equal(dtJson.visual.visualType, "decompositionTree");
+      assert.equal(dtJson.visual.visualType, "decompositionTreeVisual");
       assert(dtJson.visual.query.queryState.Analyze);
       assert.equal(dtJson.visual.query.queryState.ExplainBy.projections.length, 2);
       console.log("✓ 'add_visual' (decompositionTree) success.");

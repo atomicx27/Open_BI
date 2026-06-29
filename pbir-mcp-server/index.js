@@ -536,7 +536,7 @@ function buildVisualJson(visualType, fields, layout) {
   } else if (visualType === 'stackedBarChart') {
     internalVisualType = 'barChart';
   } else if (visualType === 'decompositionTree') {
-    internalVisualType = 'decompositionTree';
+    internalVisualType = 'decompositionTreeVisual';
   } else if (visualType === 'keyInfluencers') {
     internalVisualType = 'keyInfluencers';
   } else if (visualType === 'map' || visualType === 'filledMap') {
