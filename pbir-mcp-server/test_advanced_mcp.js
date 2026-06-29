@@ -910,6 +910,69 @@ function runMcpSession() {
       assert.equal(fmtPresetJson.visual.objects.border[0].properties.color.solid.color.expr.Literal.Value, "'#E0E0E0'");
       console.log("✓ 'format_visual' preset success.");
 
+      console.log("Testing 'add_visual' (smartNarrative)...");
+      const smartNarrativeResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "smartNarrative",
+          fields: {},
+          layout: {}
+        }
+      });
+      assert(!smartNarrativeResp.result.isError);
+      const smartNarrativeId = JSON.parse(smartNarrativeResp.result.content[0].text).visualId;
+      const smartNarrativeJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', smartNarrativeId, 'visual.json'), 'utf8'));
+      assert.equal(smartNarrativeJson.visual.visualType, "smartNarrative");
+      assert.equal(smartNarrativeJson.visual.query, undefined);
+      assert.equal(smartNarrativeJson.position.x, 30);
+      assert.equal(smartNarrativeJson.position.y, 570);
+      assert.equal(smartNarrativeJson.position.width, 1220);
+      assert.equal(smartNarrativeJson.position.height, 120);
+      console.log("✓ 'add_visual' (smartNarrative) success.");
+
+      console.log("Testing 'format_visual' (anomalyDetection on Line Chart)...");
+      // First create a standard line chart
+      const lineChartResp = await sendRequest('tools/call', {
+        name: 'add_visual',
+        arguments: {
+          pageId,
+          visualType: "lineChart",
+          fields: {
+            xAxis: "financials.Date",
+            yAxis: ["financials.Sales"]
+          }
+        }
+      });
+      assert(!lineChartResp.result.isError);
+      const lineChartId = JSON.parse(lineChartResp.result.content[0].text).visualId;
+      
+      // Format with anomaly detection
+      const fmtAnomalyResp = await sendRequest('tools/call', {
+        name: 'format_visual',
+        arguments: {
+          pageId,
+          visualId: lineChartId,
+          anomalyDetection: {
+            show: true,
+            sensitivity: 75,
+            markerShape: "circle",
+            markerSize: 6,
+            color: "#E01B2F"
+          }
+        }
+      });
+      assert(!fmtAnomalyResp.result.isError);
+      const lineChartJson = JSON.parse(fs.readFileSync(path.join(tempReportPath, 'definition', 'pages', pageId, 'visuals', lineChartId, 'visual.json'), 'utf8'));
+      assert(lineChartJson.visual.objects.anomalyDetection);
+      const anomalyProperties = lineChartJson.visual.objects.anomalyDetection[0].properties;
+      assert.equal(anomalyProperties.show.expr.Literal.Value, "true");
+      assert.equal(anomalyProperties.sensitivity.expr.Literal.Value, "0.75");
+      assert.equal(anomalyProperties.markerShape.expr.Literal.Value, "'circle'");
+      assert.equal(anomalyProperties.markerSize.expr.Literal.Value, "6");
+      assert.equal(anomalyProperties.color.solid.color.expr.Literal.Value, "'#E01B2F'");
+      console.log("✓ 'format_visual' (anomalyDetection) success.");
+
       // 14. Delete Visual
       console.log("Testing 'delete_visual'...");
       const delResp = await sendRequest('tools/call', {

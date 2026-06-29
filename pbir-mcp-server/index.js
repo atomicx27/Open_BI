@@ -543,15 +543,32 @@ function buildVisualJson(visualType, fields, layout) {
     internalVisualType = 'azureMap';
   }
 
+  // Handle Smart Narrative default layout positioning
+  let x = layout.x;
+  let y = layout.y;
+  let width = layout.width;
+  let height = layout.height;
+  if (visualType === 'smartNarrative') {
+    if (x === undefined) x = 30;
+    if (y === undefined) y = 570;
+    if (width === undefined) width = 1220;
+    if (height === undefined) height = 120;
+  } else {
+    if (x === undefined) x = 0;
+    if (y === undefined) y = 0;
+    if (width === undefined) width = 300;
+    if (height === undefined) height = 250;
+  }
+
   // Base visual structure
   const visualObj = {
     "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json",
     "name": visualName,
     "position": {
-      "x": layout.x || 0,
-      "y": layout.y || 0,
-      "width": layout.width || 300,
-      "height": layout.height || 250
+      "x": x,
+      "y": y,
+      "width": width,
+      "height": height
     },
     "visual": {
       "visualType": internalVisualType,
@@ -909,6 +926,8 @@ function buildVisualJson(visualType, fields, layout) {
         };
       }
     }
+  } else if (visualType === 'smartNarrative') {
+    delete visualObj.visual.query;
   }
 
   return { visualName, visualObj };
@@ -1161,6 +1180,34 @@ function applyVisualFormatting(visualObj, formatArgs) {
       Object.assign(objects.valueAxis[0].properties, yAxisProps);
     }
   }
+
+  if (formatArgs.anomalyDetection) {
+    const anomalyProps = {};
+    if (formatArgs.anomalyDetection.show !== undefined) {
+      anomalyProps.show = { "expr": { "Literal": { "Value": `${formatArgs.anomalyDetection.show}` } } };
+    }
+    if (formatArgs.anomalyDetection.sensitivity !== undefined) {
+      let sens = formatArgs.anomalyDetection.sensitivity;
+      if (sens > 1) {
+        sens = sens / 100;
+      }
+      anomalyProps.sensitivity = { "expr": { "Literal": { "Value": `${sens}` } } };
+    }
+    if (formatArgs.anomalyDetection.markerShape !== undefined) {
+      anomalyProps.markerShape = { "expr": { "Literal": { "Value": `'${formatArgs.anomalyDetection.markerShape}'` } } };
+    }
+    if (formatArgs.anomalyDetection.markerSize !== undefined) {
+      anomalyProps.markerSize = { "expr": { "Literal": { "Value": `${formatArgs.anomalyDetection.markerSize}` } } };
+    }
+    if (formatArgs.anomalyDetection.color !== undefined) {
+      anomalyProps.color = { "solid": { "color": { "expr": { "Literal": { "Value": `'${formatArgs.anomalyDetection.color}'` } } } } };
+    }
+
+    if (!objects.anomalyDetection) {
+      objects.anomalyDetection = [{ "properties": {} }];
+    }
+    Object.assign(objects.anomalyDetection[0].properties, anomalyProps);
+  }
 }
 
 // Core Tool implementations
@@ -1380,7 +1427,7 @@ const tools = {
     if (!activeReportPath) {
       throw new Error("No active report project connected. Call connect_project first.");
     }
-    const { pageId, visualId, title, dataLabels, axisOverrides, containerStyle, legend, preset } = args;
+    const { pageId, visualId, title, dataLabels, axisOverrides, containerStyle, legend, preset, anomalyDetection } = args;
     if (!pageId || !visualId) {
       throw new Error("Parameters 'pageId' and 'visualId' are required.");
     }
@@ -1391,7 +1438,7 @@ const tools = {
     }
 
     const visualObj = JSON.parse(fs.readFileSync(visualJsonPath, 'utf8'));
-    applyVisualFormatting(visualObj, { title, dataLabels, axisOverrides, containerStyle, legend, preset });
+    applyVisualFormatting(visualObj, { title, dataLabels, axisOverrides, containerStyle, legend, preset, anomalyDetection });
     
     fs.writeFileSync(visualJsonPath, JSON.stringify(visualObj, null, 2), 'utf8');
     return { message: `Visual '${visualId}' updated successfully.` };
@@ -2987,7 +3034,7 @@ rl.on('line', async (line) => {
                   },
                    visualType: {
                     type: "string",
-                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable", "treemap", "waterfallChart", "scatterChart", "gauge", "kpi", "funnel", "ribbonChart", "decompositionTree", "keyInfluencers", "map", "filledMap", "lineClusteredColumnComboChart", "lineStackedColumnComboChart", "areaChart", "stackedAreaChart", "stackedColumnChart", "stackedBarChart", "hundredPercentStackedColumnChart", "hundredPercentStackedBarChart", "multiRowCard", "cardVisual", "advancedSlicerVisual", "basicShape", "image"],
+                    enum: ["card", "lineChart", "clusteredColumnChart", "clusteredBarChart", "slicer", "pieChart", "donutChart", "table", "pivotTable", "treemap", "waterfallChart", "scatterChart", "gauge", "kpi", "funnel", "ribbonChart", "decompositionTree", "keyInfluencers", "map", "filledMap", "lineClusteredColumnComboChart", "lineStackedColumnComboChart", "areaChart", "stackedAreaChart", "stackedColumnChart", "stackedBarChart", "hundredPercentStackedColumnChart", "hundredPercentStackedBarChart", "multiRowCard", "cardVisual", "advancedSlicerVisual", "basicShape", "image", "smartNarrative"],
                     description: "The visual type chart."
                   },
                   fields: {
@@ -3121,6 +3168,16 @@ rl.on('line', async (line) => {
                     type: "string",
                     enum: ["glassmorphism", "darkMinimal", "neonGradient", "orangeBrand", "redCorporate"],
                     description: "Style formatting preset to apply."
+                  },
+                  anomalyDetection: {
+                    type: "object",
+                    properties: {
+                      show: { type: "boolean" },
+                      sensitivity: { type: "number", description: "Sensitivity factor (decimal between 0 and 1, or percentage e.g. 70)" },
+                      markerShape: { type: "string", enum: ["circle", "square", "diamond"] },
+                      markerSize: { type: "integer" },
+                      color: { type: "string", description: "Hex color code override for the anomaly markers" }
+                    }
                   }
                 },
                 required: ["pageId", "visualId"]
